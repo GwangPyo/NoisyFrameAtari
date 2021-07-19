@@ -24,16 +24,16 @@ def normalize_and_add_noise(array_img):
 class AbstractNoisePlanner(ABC):
 
     @abstractmethod
-    def __call__(self):
+    def __call__(self, frame, *args, **kwargs):
         pass
 
 
-class ConstantNoisePlanner(ABC):
+class ConstantGaussianNoisePlanner(ABC):
     def __init__(self, sigma=1):
         self._sigma = sigma
 
-    def __call__(self):
-        return self._sigma
+    def __call__(self, frame, *args, **kwargs):
+        return gaussian_filter(frame.copy(), sigma=self._sigma)
 
 
 class NoisyAtariWrapper(gym.Env):
@@ -41,7 +41,7 @@ class NoisyAtariWrapper(gym.Env):
             self,
             atari_name: str,
             frame_stacks=8,
-            noise_planner=ConstantNoisePlanner(sigma=1)
+            noise_planner=ConstantGaussianNoisePlanner(sigma=1)
         ):
         self.wrapped = gym.make(atari_name)
         self.__frame_stack_len = frame_stacks
@@ -68,19 +68,19 @@ class NoisyAtariWrapper(gym.Env):
         frame = self.wrapped.reset()
         for _ in range(self.__frame_stack_len):
             self.frame_stacks.append(self.zero_obses.copy())
-        self.frame_stacks.append(gaussian_filter(frame.copy(), sigma=self.noise_planner()))
-        return np.concatenate(self.frame_stacks, axis=2).copy()
+        self.frame_stacks.append(self.noise_planner(frame.copy()))
+        return np.transpose(np.concatenate(self.frame_stacks, axis=2), (2, 0, 1))
 
     def step(self, action):
         next_frame, reward, done, info = self.wrapped.step(action)
-        self.frame_stacks.append(gaussian_filter(next_frame.copy(), sigma=self.noise_planner()))
-        return np.concatenate(self.frame_stacks, axis=2).copy(), reward, done, info
+        self.frame_stacks.append(self.noise_planner(next_frame.copy()))
+        return np.transpose(np.concatenate(self.frame_stacks, axis=2), (2, 0, 1)), reward, done, info
 
 
 if __name__ == '__main__':
     from PIL import Image
 
-    env = NoisyAtariWrapper('Breakout-v0')
+    env = NoisyAtariWrapper('Breakout-v0', frame_stacks=4, noise_planner=ConstantGaussianNoisePlanner(sigma=1))
     env.reset()
     for i in range(8):
         action = env.action_space.sample()
