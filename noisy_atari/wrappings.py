@@ -4,6 +4,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 from collections import deque
 from abc import abstractmethod, ABC
+from stable_baselines3.common.env_util import AtariWrapper
 
 
 def normalize_image(array_img):
@@ -43,7 +44,7 @@ class NoisyAtariWrapper(gym.Env):
             frame_stacks=8,
             noise_planner=ConstantGaussianNoisePlanner(sigma=1)
         ):
-        self.wrapped = gym.make(atari_name)
+        self.wrapped = AtariWrapper(gym.make(atari_name))
         self.__frame_stack_len = frame_stacks
         self.frame_stacks = deque(maxlen=self.__frame_stack_len)
         self.noise_planner = noise_planner
