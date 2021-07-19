@@ -55,7 +55,7 @@ class NoisyAtariWrapper(gym.Env):
         w = shape[0]
         h = shape[1]
         c = shape[2]
-        return gym.spaces.Box(low=-1, high=1, shape=(w, h, c * self.__frame_stack_len))
+        return gym.spaces.Box(low=-1, high=1, shape=(c * self.__frame_stack_len, w, h))
 
     @property
     def action_space(self):
@@ -85,9 +85,10 @@ if __name__ == '__main__':
     for i in range(8):
         action = env.action_space.sample()
         obs, _, _, _ = env.step(action)
-    obs = obs[:, :, 21:24]
+    print(obs.shape, env.observation_space)
+    obs = obs[:3, :, :]
     obs = gaussian_filter(obs, sigma=1)
 
 
-    img = Image.fromarray(obs)
+    img = Image.fromarray(np.transpose(obs, (1, 2, 0)))
     img.show()
